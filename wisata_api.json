@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Wisata API - End to End Flow",
-    "description": "Skenario pengujian lengkap API Wisata dari Registrasi hingga Review",
+    "name": "Wisata API - Full End to End",
+    "description": "Koleksi lengkap seluruh endpoint API Wisata (termasuk Update, Delete, Reject, Featured, dll).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,11 +11,11 @@
     },
     {
       "key": "adminToken",
-      "value": "ISI_DENGAN_TOKEN_ADMIN_SETELAH_LOGIN"
+      "value": "ISI_DENGAN_TOKEN_ADMIN_DI_SINI"
     },
     {
       "key": "customerToken",
-      "value": "ISI_DENGAN_TOKEN_CUSTOMER_SETELAH_LOGIN"
+      "value": "ISI_DENGAN_TOKEN_CUSTOMER_DI_SINI"
     }
   ],
   "item": [
@@ -57,11 +57,19 @@
             "body": { "mode": "raw", "raw": "{\n  \"email\": \"budi@example.com\",\n  \"password\": \"budi123\"\n}" },
             "url": "{{baseUrl}}/auth/login"
           }
+        },
+        {
+          "name": "1.5 Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/logout"
+          }
         }
       ]
     },
     {
-      "name": "2. Admin - Setup Data",
+      "name": "2. Admin - Manage Wisata & Schedule",
       "item": [
         {
           "name": "2.1 Create Wisata",
@@ -73,7 +81,24 @@
           }
         },
         {
-          "name": "2.2 Create Schedule",
+          "name": "2.2 Update Wisata",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": { "mode": "raw", "raw": "{\n  \"ticketPrice\": 35000,\n  \"description\": \"Deskripsi wisata telah diperbarui oleh Admin.\"\n}" },
+            "url": "{{baseUrl}}/admin/wisata/1"
+          }
+        },
+        {
+          "name": "2.3 Delete Wisata",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}],
+            "url": "{{baseUrl}}/admin/wisata/1"
+          }
+        },
+        {
+          "name": "2.4 Create Schedule",
           "request": {
             "method": "POST",
             "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}, {"key": "Content-Type", "value": "application/json"}],
@@ -87,28 +112,49 @@
       "name": "3. Public Access",
       "item": [
         {
-          "name": "3.1 Search Wisata",
+          "name": "3.1 Get All Wisata",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wisata?page=1" }
+        },
+        {
+          "name": "3.2 Get Featured Wisata",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wisata/featured" }
+        },
+        {
+          "name": "3.3 Search Wisata",
           "request": { "method": "GET", "url": "{{baseUrl}}/wisata/search?q=curug&page=1" }
         },
         {
-          "name": "3.2 Get Detail Wisata",
+          "name": "3.4 Get Wisata By Tag",
+          "request": { "method": "GET", "url": "{{baseUrl}}/wisata/tag/wisata-air" }
+        },
+        {
+          "name": "3.5 Get Detail Wisata",
           "request": { "method": "GET", "url": "{{baseUrl}}/wisata/curug-cibaliung" }
         },
         {
-          "name": "3.3 Get Available Schedules",
+          "name": "3.6 Get Available Schedules",
           "request": { "method": "GET", "url": "{{baseUrl}}/wisata/curug-cibaliung/schedules" }
         }
       ]
     },
     {
-      "name": "4. Customer - Transaction",
+      "name": "4. Customer - Profile & Booking",
       "item": [
         {
           "name": "4.1 Get Profile",
           "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}], "url": "{{baseUrl}}/profile" }
         },
         {
-          "name": "4.2 Create Booking",
+          "name": "4.2 Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}, {"key": "Content-Type", "value": "application/json"}],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Budi Santoso Updated\",\n  \"phoneNumber\": \"081234567890\"\n}" },
+            "url": "{{baseUrl}}/profile"
+          }
+        },
+        {
+          "name": "4.3 Create Booking",
           "request": {
             "method": "POST",
             "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}, {"key": "Content-Type", "value": "application/json"}],
@@ -117,7 +163,15 @@
           }
         },
         {
-          "name": "4.3 Upload Payment Proof",
+          "name": "4.4 Cancel Booking",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}],
+            "url": "{{baseUrl}}/bookings/1/cancel"
+          }
+        },
+        {
+          "name": "4.5 Upload Payment Proof",
           "request": {
             "method": "POST",
             "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}, {"key": "Content-Type", "value": "application/json"}],
@@ -131,23 +185,23 @@
       "name": "5. Admin - Verification & Check-in",
       "item": [
         {
-          "name": "5.1 Get Bookings (Waiting Verification)",
+          "name": "5.1 Get Bookings (Filter by Status)",
           "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}], "url": "{{baseUrl}}/admin/bookings?status=WAITING_VERIFICATION" }
         },
         {
-          "name": "5.2 Verify Payment",
+          "name": "5.2 Verify Payment (Approve)",
           "request": { "method": "PUT", "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}], "url": "{{baseUrl}}/admin/bookings/1/verify" }
         },
         {
-          "name": "5.3 Check My Active Tickets (Customer Side)",
-          "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}], "url": "{{baseUrl}}/my-tickets" }
+          "name": "5.3 Reject Payment",
+          "request": { "method": "PUT", "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}], "url": "{{baseUrl}}/admin/bookings/1/reject" }
         },
         {
           "name": "5.4 Scan Ticket (Check-in)",
           "request": {
             "method": "POST",
             "header": [{"key": "Authorization", "value": "Bearer {{adminToken}}"}, {"key": "Content-Type", "value": "application/json"}],
-            "body": { "mode": "raw", "raw": "{\n  \"qrCode\": \"GANTI_DENGAN_QR_CODE_DARI_RESPONS_MY_TICKETS\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"qrCode\": \"GANTI_DENGAN_QR_CODE_YANG_DIDAPAT\"\n}" },
             "url": "{{baseUrl}}/admin/bookings/scan"
           }
         }
@@ -157,15 +211,19 @@
       "name": "6. Customer - Post Visit",
       "item": [
         {
-          "name": "6.1 Get History",
+          "name": "6.1 Check My Active Tickets",
+          "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}], "url": "{{baseUrl}}/my-tickets" }
+        },
+        {
+          "name": "6.2 Get History",
           "request": { "method": "GET", "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}], "url": "{{baseUrl}}/history" }
         },
         {
-          "name": "6.2 Create Review",
+          "name": "6.3 Create Review",
           "request": {
             "method": "POST",
             "header": [{"key": "Authorization", "value": "Bearer {{customerToken}}"}, {"key": "Content-Type", "value": "application/json"}],
-            "body": { "mode": "raw", "raw": "{\n  \"bookingId\": 1,\n  \"rating\": 5,\n  \"comment\": \"Airnya sangat jernih dan fasilitas lengkap. Pasti akan kembali lagi!\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"bookingId\": 1,\n  \"rating\": 5,\n  \"comment\": \"Tempat wisata sangat bersih dan nyaman!\"\n}" },
             "url": "{{baseUrl}}/reviews"
           }
         }
