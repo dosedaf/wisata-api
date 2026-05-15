@@ -80,3 +80,40 @@ func (bc *BookingController) CreateBooking(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, utils.SuccessResponse("Booking berhasil dibuat", booking))
 }
+
+func (bc *BookingController) CancelBooking(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	bookingID := c.Param("id")
+
+	tx := bc.DB.Begin()
+
+	var booking models.Booking
+	if err := tx.Where("id = ? AND user_id = ?", bookingID, userID).First(&booking).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Booking tidak ditemukan", nil))
+		return
+	}
+
+	if booking.Status != "PENDING" {
+		tx.Rollback()
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Hanya booking yang belum dibayar (PENDING) yang dapat dibatalkan", nil))
+		return
+	}
+
+	booking.Status = "CANCELED"
+	if err := tx.Save(&booking).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal membatalkan booking", nil))
+		return
+	}
+
+	var schedule models.Schedule
+	if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&schedule, booking.ScheduleID).Error; err == nil {
+		schedule.RemainingQuota += booking.TotalTicket
+		tx.Save(&schedule)
+	}
+
+	tx.Commit()
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("Pesanan berhasil dibatalkan, kuota tiket dikembalikan", nil))
+}

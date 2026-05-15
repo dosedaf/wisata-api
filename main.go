@@ -29,8 +29,10 @@ func main() {
 	userC := &controllers.UserController{DB: db}
 	trxC := &controllers.TransactionController{DB: db}
 	adminC := &controllers.AdminController{DB: db}
+	uploadC := &controllers.UploadController{}
 
 	r := gin.Default()
+	r.Static("/public", "./public")
 
 	auth := r.Group("/auth")
 	{
@@ -61,6 +63,9 @@ func main() {
 		api.GET("/history", userC.GetHistory)
 		
 		api.POST("/reviews", trxC.CreateReview)
+		api.POST("/upload", uploadC.UploadFile)
+		api.POST("/bookings/:id/cancel", bookingC.CancelBooking)
+
 	}
 
 	admin := r.Group("/admin")
@@ -72,6 +77,10 @@ func main() {
 		admin.GET("/bookings", adminC.GetBookings)
 		admin.PUT("/bookings/:id/verify", adminC.VerifyPayment)
 		admin.PUT("/bookings/:id/reject", adminC.RejectPayment)
+		admin.POST("/bookings/scan", adminC.ScanTicket)
+
+		admin.PUT("/wisata/:id", adminC.UpdateWisata)
+		admin.DELETE("/wisata/:id", adminC.DeleteWisata)
 	}
 
 	r.Run(":8080")
