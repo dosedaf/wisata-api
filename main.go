@@ -9,6 +9,7 @@ import (
 	"wisata-api/middlewares"
 	"wisata-api/models"
 
+	"github.com/gin-contrib/cors" 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 
@@ -61,6 +62,13 @@ func main() {
 	uploadC := &controllers.UploadController{}
 
 	r := gin.Default()
+
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true 
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Length", "Content-Type", "Authorization"}
+	r.Use(cors.New(corsConfig))
+
 	r.Static("/public", "./public")
 
 	auth := r.Group("/auth")
