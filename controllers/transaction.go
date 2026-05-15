@@ -12,30 +12,6 @@ type TransactionController struct {
 	DB *gorm.DB
 }
 
-func (tc *TransactionController) UploadPayment(c *gin.Context) {
-	var input struct {
-		BookingID     uint   `json:"bookingId" binding:"required"`
-		PaymentMethod string `json:"paymentMethod"`
-		PaymentProof  string `json:"paymentProof"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Input tidak valid", nil))
-		return
-	}
-
-	if err := tc.DB.Model(&models.Booking{}).Where("id = ?", input.BookingID).
-		Updates(map[string]interface{}{
-			"status": "ACTIVE",
-			"qr_code": "QR-" + utils.RandomString(10), 
-		}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal proses pembayaran", nil))
-		return
-	}
-
-	c.JSON(http.StatusOK, utils.SuccessResponse("Pembayaran berhasil dikirim", nil))
-}
-
 func (tc *TransactionController) CreateReview(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var input struct {
@@ -79,4 +55,30 @@ func (tc *TransactionController) CreateReview(c *gin.Context) {
 	tx.Commit()
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Review berhasil ditambahkan", review))
+}
+
+func (tc *TransactionController) UploadPayment(c *gin.Context) {
+	var input struct {
+		BookingID     uint   `json:"bookingId" binding:"required"`
+		PaymentMethod string `json:"paymentMethod" binding:"required"`
+		PaymentProof  string `json:"paymentProof" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Input tidak valid", nil))
+		return
+	}
+
+	// Ubah status menjadi menunggu verifikasi
+	if err := tc.DB.Model(&models.Booking{}).Where("id = ? AND status = ?", input.BookingID, "PENDING").
+		Updates(map[string]interface{}{
+			"status":         "WAITING_VERIFICATION",
+			"payment_method": input.PaymentMethod,
+			"payment_proof":  input.PaymentProof,
+		}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal memproses pembayaran atau booking sudah diproses", nil))
+		return
+	}
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("Pembayaran berhasil dikirim, menunggu verifikasi Admin", nil))
 }

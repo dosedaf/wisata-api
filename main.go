@@ -68,6 +68,10 @@ func main() {
 	{
 		admin.POST("/wisata", adminC.CreateWisata)
 		admin.POST("/schedules", adminC.CreateSchedule)
+		
+		admin.GET("/bookings", adminC.GetBookings)
+		admin.PUT("/bookings/:id/verify", adminC.VerifyPayment)
+		admin.PUT("/bookings/:id/reject", adminC.RejectPayment)
 	}
 
 	r.Run(":8080")

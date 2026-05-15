@@ -92,3 +92,4 @@ func (uc *UserController) GetHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", response))
 }
+
