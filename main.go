@@ -1,17 +1,41 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
+
 	"wisata-api/controllers"
 	"wisata-api/middlewares"
 	"wisata-api/models"
+
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func main() {
-	dsn := "yoda:@tcp(127.0.0.1:3306)/wisata_db?charset=utf8mb4&parseTime=True&loc=Local"
+	err := godotenv.Load()
+	if err != nil {
+		log.Println(".env file not found")
+	}
+
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		dbUser,
+		dbPass,
+		dbHost,
+		dbPort,
+		dbName,
+	)
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -19,8 +43,13 @@ func main() {
 	}
 
 	db.AutoMigrate(
-		&models.User{}, &models.Wisata{}, &models.WisataGallery{},
-		&models.Tag{}, &models.Schedule{}, &models.Booking{}, &models.Review{},
+		&models.User{},
+		&models.Wisata{},
+		&models.WisataGallery{},
+		&models.Tag{},
+		&models.Schedule{},
+		&models.Booking{},
+		&models.Review{},
 	)
 
 	authC := &controllers.AuthController{DB: db}
@@ -38,7 +67,12 @@ func main() {
 	{
 		auth.POST("/register", authC.Register)
 		auth.POST("/login", authC.Login)
-		auth.POST("/logout", func(c *gin.Context) { c.JSON(200, gin.H{"success": true, "message": "Logout berhasil"}) })
+		auth.POST("/logout", func(c *gin.Context) {
+			c.JSON(200, gin.H{
+				"success": true,
+				"message": "Logout berhasil",
+			})
+		})
 	}
 
 	wisata := r.Group("/wisata")
@@ -58,22 +92,24 @@ func main() {
 
 		api.POST("/bookings", bookingC.CreateBooking)
 		api.POST("/payments/upload", trxC.UploadPayment)
-		
+
 		api.GET("/my-tickets", userC.GetMyTickets)
 		api.GET("/history", userC.GetHistory)
-		
+
 		api.POST("/reviews", trxC.CreateReview)
 		api.POST("/upload", uploadC.UploadFile)
 		api.POST("/bookings/:id/cancel", bookingC.CancelBooking)
-
 	}
 
 	admin := r.Group("/admin")
-	admin.Use(middlewares.RequireAuth(), middlewares.RequireAdmin())
+	admin.Use(
+		middlewares.RequireAuth(),
+		middlewares.RequireAdmin(),
+	)
 	{
 		admin.POST("/wisata", adminC.CreateWisata)
 		admin.POST("/schedules", adminC.CreateSchedule)
-		
+
 		admin.GET("/bookings", adminC.GetBookings)
 		admin.PUT("/bookings/:id/verify", adminC.VerifyPayment)
 		admin.PUT("/bookings/:id/reject", adminC.RejectPayment)
