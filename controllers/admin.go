@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 	"wisata-api/models"
 	"wisata-api/utils"
@@ -20,12 +21,28 @@ func (ac *AdminController) CreateWisata(c *gin.Context) {
 		return
 	}
 
+	baseSlug := utils.GenerateSlug(input.Name)
+	slug := baseSlug
+	var count int64
+	var i int = 1
+
+	for {
+		ac.DB.Model(&models.Wisata{}).Where("slug = ?", slug).Count(&count)
+		if count == 0 {
+			break
+		}
+
+		slug = fmt.Sprintf("%s-%d", baseSlug, i)
+		i++
+	}
+	input.Slug = slug 
+
 	if err := ac.DB.Create(&input).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal membuat wisata", nil))
 		return
 	}
 
-	c.JSON(http.StatusOK, utils.SuccessResponse("Wisata berhasil dibuat", nil))
+	c.JSON(http.StatusOK, utils.SuccessResponse("Wisata berhasil dibuat", input))
 }
 
 func (ac *AdminController) CreateSchedule(c *gin.Context) {
@@ -175,7 +192,6 @@ func (ac *AdminController) UpdateWisata(c *gin.Context) {
 		return
 	}
 
-	// Buat struct penampung input
 	var input models.Wisata
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Validasi gagal", nil))

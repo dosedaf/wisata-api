@@ -8,4 +8,10 @@ automatic_scaling:
   target_cpu_utilization: 0.65
 
 env_variables:
-  ENV: "production"
+  DB_HOST: "34.101.167.164"
+  DB_PORT: "3306"
+  DB_NAME: "wisata_db"
+  DB_USER: "yoda"
+
+secret_env:
+  DB_PASSWORD: projects/991771824221/secrets/passwordmysql/versions/latest

@@ -29,9 +29,9 @@ func (wc *WisataController) Search(c *gin.Context) {
 	var wisata []models.Wisata
 	var total int64
 
-	query := wc.DB.Model(&models.Wisata{}).Where("name ILIKE ?", "%"+q+"%")
+	query := wc.DB.Model(&models.Wisata{}).Where("name LIKE ?", "%"+q+"%")
 	query.Count(&total)
-	query.Limit(limit).Offset(offset).Find(&wisata)
+	query.Preload("Tags").Limit(limit).Offset(offset).Find(&wisata)
 
 	totalPages := int(math.Ceil(float64(total) / float64(limit)))
 
@@ -50,14 +50,22 @@ func (wc *WisataController) GetByTag(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	var wisata []models.Wisata
+	var total int64
 	
-	wc.DB.Joins("JOIN wisata_tags ON wisata_tags.wisata_id = wisata.id").
+	query := wc.DB.Model(&models.Wisata{}).
+		Joins("JOIN wisata_tags ON wisata_tags.wisata_id = wisatas.id").
 		Joins("JOIN tags ON tags.id = wisata_tags.tag_id").
-		Where("tags.name = ?", tagName).
-		Limit(limit).Offset(offset).Find(&wisata)
+		Where("tags.name = ?", tagName)
+
+	query.Count(&total)
+	query.Preload("Tags").Limit(limit).Offset(offset).Find(&wisata)
+
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", gin.H{
 		"currentPage": page,
+		"totalPages":  totalPages,
+		"totalData":   total,
 		"items":       wisata,
 	}))
 }
