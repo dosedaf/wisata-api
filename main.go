@@ -119,6 +119,7 @@ func main() {
 
 	wisata := r.Group("/wisata")
 	{
+		wisata.GET("", wisataC.GetAll)
 		wisata.GET("/featured", wisataC.GetFeatured)
 		wisata.GET("/search", wisataC.Search)
 		wisata.GET("/tag/:tag", wisataC.GetByTag)
