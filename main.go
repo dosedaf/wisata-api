@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -9,13 +10,37 @@ import (
 	"wisata-api/middlewares"
 	"wisata-api/models"
 
-	"github.com/gin-contrib/cors" 
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
+func accessSecret() string {
+	ctx := context.Background()
+
+	client, err := secretmanager.NewClient(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req := &secretmanagerpb.AccessSecretVersionRequest{
+		Name: "projects/991771824221/secrets/passwordmysql/versions/latest",
+	}
+
+	result, err := client.AccessSecretVersion(ctx, req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(result.Payload.Data)
+}
 
 func main() {
 	err := godotenv.Load()
@@ -26,8 +51,17 @@ func main() {
 	dbHost := os.Getenv("DB_HOST")
 	dbPort := os.Getenv("DB_PORT")
 	dbUser := os.Getenv("DB_USER")
-	dbPass := os.Getenv("DB_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
+
+	var dbPass string
+
+	env := os.Getenv("ENV")
+
+	if env == "production" {
+		dbPass = accessSecret()
+	} else {
+		dbPass = os.Getenv("DB_PASSWORD")
+	}
 
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
