@@ -14,6 +14,28 @@ type WisataController struct {
 	DB *gorm.DB
 }
 
+func (wc *WisataController) GetAll(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit := 10
+	offset := (page - 1) * limit
+
+	var wisata []models.Wisata
+	var total int64
+
+	query := wc.DB.Model(&models.Wisata{})
+	query.Count(&total)
+	query.Preload("Tags").Limit(limit).Offset(offset).Find(&wisata)
+
+	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", gin.H{
+		"currentPage": page,
+		"totalPages":  totalPages,
+		"totalData":   total,
+		"items":       wisata,
+	}))
+}
+
 func (wc *WisataController) GetFeatured(c *gin.Context) {
 	var wisata []models.Wisata
 	wc.DB.Preload("Tags").Order("rating DESC").Limit(5).Find(&wisata)
