@@ -15,20 +15,29 @@ type WisataController struct {
 }
 
 func (wc *WisataController) GetAll(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageStr := c.DefaultQuery("page", "1")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+
 	limit := 10
 	offset := (page - 1) * limit
 
 	var wisata []models.Wisata
 	var total int64
 
-	query := wc.DB.Model(&models.Wisata{})
-	query.Count(&total)
-	query.Preload("Tags").Limit(limit).Offset(offset).Find(&wisata)
+	wc.DB.Model(&models.Wisata{}).Count(&total)
+
+	wc.DB.Preload("Tags").Limit(limit).Offset(offset).Find(&wisata)
 
 	totalPages := int(math.Ceil(float64(total) / float64(limit)))
 
-	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", gin.H{
+	if wisata == nil {
+		wisata = []models.Wisata{}
+	}
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil mengambil semua data wisata", gin.H{
 		"currentPage": page,
 		"totalPages":  totalPages,
 		"totalData":   total,
