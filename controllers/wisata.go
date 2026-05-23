@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"wisata-api/models"
 	"wisata-api/utils"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -48,6 +49,11 @@ func (wc *WisataController) GetAll(c *gin.Context) {
 func (wc *WisataController) GetFeatured(c *gin.Context) {
 	var wisata []models.Wisata
 	wc.DB.Preload("Tags").Order("rating DESC").Limit(5).Find(&wisata)
+	
+	if wisata == nil {
+		wisata = []models.Wisata{}
+	}
+	
 	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", wisata))
 }
 
@@ -66,6 +72,10 @@ func (wc *WisataController) Search(c *gin.Context) {
 
 	totalPages := int(math.Ceil(float64(total) / float64(limit)))
 
+	if wisata == nil {
+		wisata = []models.Wisata{}
+	}
+
 	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", gin.H{
 		"currentPage": page,
 		"totalPages":  totalPages,
@@ -82,9 +92,9 @@ func (wc *WisataController) GetByTag(c *gin.Context) {
 
 	var wisata []models.Wisata
 	var total int64
-	
+
 	query := wc.DB.Model(&models.Wisata{}).
-		Joins("JOIN wisata_tags ON wisata_tags.wisata_id = wisatas.id").
+		Joins("JOIN wisata_tags ON wisata_tags.wisata_id = wisata.id").
 		Joins("JOIN tags ON tags.id = wisata_tags.tag_id").
 		Where("tags.name = ?", tagName)
 
@@ -92,6 +102,10 @@ func (wc *WisataController) GetByTag(c *gin.Context) {
 	query.Preload("Tags").Limit(limit).Offset(offset).Find(&wisata)
 
 	totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+	if wisata == nil {
+		wisata = []models.Wisata{}
+	}
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", gin.H{
 		"currentPage": page,
@@ -115,10 +129,15 @@ func (wc *WisataController) GetDetail(c *gin.Context) {
 }
 
 func (wc *WisataController) GetSchedules(c *gin.Context) {
-	wisataID := c.Param("id")
+	wisataSlug := c.Param("slug")
 	var schedules []models.Schedule
 
-	wc.DB.Where("wisata_id = ?", wisataID).Find(&schedules)
+	wc.DB.Joins("JOIN wisata ON wisata.id = schedules.wisata_id").
+		Where("wisata.slug = ?", wisataSlug).Find(&schedules)
+
+	if schedules == nil {
+		schedules = []models.Schedule{}
+	}
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", schedules))
 }
