@@ -14,14 +14,19 @@ type AdminController struct {
 }
 
 func (ac *AdminController) CreateWisata(c *gin.Context) {
-	var input models.Wisata
+	var input struct {
+		models.Wisata
+		TagIDs []uint `json:"tagIds"`
+	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Validasi gagal", nil))
 		return
 	}
 
-	baseSlug := utils.GenerateSlug(input.Name)
+	wisata := input.Wisata
+
+	baseSlug := utils.GenerateSlug(wisata.Name)
 	slug := baseSlug
 	var count int64
 	var i int = 1
@@ -31,18 +36,28 @@ func (ac *AdminController) CreateWisata(c *gin.Context) {
 		if count == 0 {
 			break
 		}
-
 		slug = fmt.Sprintf("%s-%d", baseSlug, i)
 		i++
 	}
-	input.Slug = slug 
+	wisata.Slug = slug
 
-	if err := ac.DB.Create(&input).Error; err != nil {
+	if err := ac.DB.Create(&wisata).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal membuat wisata", nil))
 		return
 	}
 
-	c.JSON(http.StatusOK, utils.SuccessResponse("Wisata berhasil dibuat", input))
+	if len(input.TagIDs) > 0 {
+		var tags []models.Tag
+		ac.DB.Where("id IN ?", input.TagIDs).Find(&tags)
+
+		if err := ac.DB.Model(&wisata).Association("Tags").Append(&tags); err != nil {
+			c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Wisata berhasil dibuat, tetapi gagal menghubungkan tag", nil))
+			return
+		}
+		wisata.Tags = tags
+	}
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("Wisata berhasil dibuat", wisata))
 }
 
 func (ac *AdminController) CreateSchedule(c *gin.Context) {

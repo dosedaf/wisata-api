@@ -17,10 +17,25 @@ import (
 	"github.com/joho/godotenv"
 
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
-
-	"gorm.io/driver/mysql"
+"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
+func seedTags(db *gorm.DB) {
+	hardcodedTags := []string{
+		"wisata-air",
+		"wisata-sungai",
+		"wisata-alam",
+		"wisata-budaya",
+		"wisata-kuliner",
+		"wisata-keluarga",
+	}
+
+	for _, tagName := range hardcodedTags {
+		var tag models.Tag
+		db.Where(models.Tag{Name: tagName}).FirstOrCreate(&tag)
+	}
+}
 
 func accessSecret() string {
 	ctx := context.Background()
@@ -94,6 +109,10 @@ func main() {
 	trxC := &controllers.TransactionController{DB: db}
 	adminC := &controllers.AdminController{DB: db}
 	uploadC := &controllers.UploadController{}
+	tagC := &controllers.TagController{DB: db}
+
+
+	seedTags(db)
 
 	r := gin.Default()
 
@@ -104,6 +123,7 @@ func main() {
 	r.Use(cors.New(corsConfig))
 
 	r.Static("/public", "./public")
+	r.GET("/tags", tagC.GetAllTags)
 
 	auth := r.Group("/auth")
 	{
