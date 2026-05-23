@@ -33,7 +33,7 @@ type Wisata struct {
 }
 
 type Tag struct {
-	ID   uint   `gorm:"primaryKey" json:"-"`
+	ID   uint   `gorm:"primaryKey" json:"id"`
 	Name string `gorm:"uniqueIndex" json:"name"`
 }
 
@@ -46,7 +46,7 @@ type WisataGallery struct {
 type Schedule struct {
 	ID             uint      `gorm:"primaryKey" json:"id"`
 	WisataID       uint      `json:"wisataId"`
-	VisitDate      string    `json:"visitDate"` // Gunakan string YYYY-MM-DD agar sederhana
+	VisitDate      string    `json:"visitDate"`
 	Quota          int       `json:"quota"`
 	RemainingQuota int       `json:"remainingQuota"`
 }
