@@ -17,25 +17,9 @@ import (
 	"github.com/joho/godotenv"
 
 	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
-"gorm.io/driver/mysql"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
-func seedTags(db *gorm.DB) {
-	hardcodedTags := []string{
-		"wisata-air",
-		"wisata-sungai",
-		"wisata-alam",
-		"wisata-budaya",
-		"wisata-kuliner",
-		"wisata-keluarga",
-	}
-
-	for _, tagName := range hardcodedTags {
-		var tag models.Tag
-		db.Where(models.Tag{Name: tagName}).FirstOrCreate(&tag)
-	}
-}
 
 func accessSecret() string {
 	ctx := context.Background()
@@ -55,6 +39,22 @@ func accessSecret() string {
 	}
 
 	return string(result.Payload.Data)
+}
+
+func seedTags(db *gorm.DB) {
+	hardcodedTags := []string{
+		"wisata-air",
+		"wisata-sungai",
+		"wisata-alam",
+		"wisata-budaya",
+		"wisata-kuliner",
+		"wisata-keluarga",
+	}
+
+	for _, tagName := range hardcodedTags {
+		var tag models.Tag
+		db.Where(models.Tag{Name: tagName}).FirstOrCreate(&tag)
+	}
 }
 
 func main() {
@@ -97,10 +97,11 @@ func main() {
 		&models.Wisata{},
 		&models.WisataGallery{},
 		&models.Tag{},
-		&models.Schedule{},
 		&models.Booking{},
 		&models.Review{},
 	)
+
+	seedTags(db)
 
 	authC := &controllers.AuthController{DB: db}
 	wisataC := &controllers.WisataController{DB: db}
@@ -110,9 +111,6 @@ func main() {
 	adminC := &controllers.AdminController{DB: db}
 	uploadC := &controllers.UploadController{}
 	tagC := &controllers.TagController{DB: db}
-
-
-	seedTags(db)
 
 	r := gin.Default()
 
@@ -144,7 +142,6 @@ func main() {
 		wisata.GET("/search", wisataC.Search)
 		wisata.GET("/tag/:tag", wisataC.GetByTag)
 		wisata.GET("/:slug", wisataC.GetDetail)
-		wisata.GET("/:slug/schedules", wisataC.GetSchedules)
 	}
 
 	api := r.Group("/")
@@ -171,7 +168,6 @@ func main() {
 	)
 	{
 		admin.POST("/wisata", adminC.CreateWisata)
-		admin.POST("/schedules", adminC.CreateSchedule)
 
 		admin.GET("/bookings", adminC.GetBookings)
 		admin.PUT("/bookings/:id/verify", adminC.VerifyPayment)

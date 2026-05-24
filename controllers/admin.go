@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"time"
 	"wisata-api/models"
 	"wisata-api/utils"
 	"github.com/gin-gonic/gin"
@@ -60,29 +61,13 @@ func (ac *AdminController) CreateWisata(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SuccessResponse("Wisata berhasil dibuat", wisata))
 }
 
-func (ac *AdminController) CreateSchedule(c *gin.Context) {
-	var input models.Schedule
-
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Validasi gagal", nil))
-		return
-	}
-
-	input.RemainingQuota = input.Quota
-
-	if err := ac.DB.Create(&input).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal membuat jadwal", nil))
-		return
-	}
-
-	c.JSON(http.StatusOK, utils.SuccessResponse("Schedule berhasil dibuat", nil))
-}
 
 func (ac *AdminController) GetBookings(c *gin.Context) {
 	status := c.Query("status")
 	var bookings []models.Booking
 
-	query := ac.DB.Preload("User").Preload("Wisata").Preload("Schedule").Order("created_at DESC")
+	// HAPUS Preload("Schedule")
+	query := ac.DB.Preload("User").Preload("Wisata").Order("created_at DESC")
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
@@ -141,10 +126,10 @@ func (ac *AdminController) RejectPayment(c *gin.Context) {
 		return
 	}
 
-	var schedule models.Schedule
-	if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&schedule, booking.ScheduleID).Error; err == nil {
-		schedule.RemainingQuota += booking.TotalTicket
-		tx.Save(&schedule)
+	var wisata models.Wisata
+	if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&wisata, booking.WisataID).Error; err == nil {
+		wisata.Capacity += booking.TotalTicket
+		tx.Save(&wisata)
 	}
 
 	tx.Commit()
@@ -177,13 +162,12 @@ func (ac *AdminController) ScanTicket(c *gin.Context) {
 		return
 	}
 
-	/* 
-	today := time.Now().Format("2006-01-02")
-	if booking.Schedule.VisitDate != today {
-		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Tiket ini tidak berlaku untuk hari ini", nil))
+	if time.Now().After(booking.ValidUntil) {
+		booking.Status = "EXPIRED"
+		ac.DB.Save(&booking) 
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Mohon maaf, masa berlaku tiket ini sudah habis", nil))
 		return
 	}
-	*/
 
 	booking.Status = "COMPLETED"
 	if err := ac.DB.Save(&booking).Error; err != nil {
@@ -202,21 +186,37 @@ func (ac *AdminController) UpdateWisata(c *gin.Context) {
 	id := c.Param("id")
 	var wisata models.Wisata
 
-	if err := ac.DB.First(&wisata, id).Error; err != nil {
+	if err := ac.DB.Preload("Tags").First(&wisata, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, utils.ErrorResponse("Wisata tidak ditemukan", nil))
 		return
 	}
 
-	var input models.Wisata
+	var input struct {
+		models.Wisata
+		TagIDs []uint `json:"tagIds"`
+	}
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Validasi gagal", nil))
 		return
 	}
 
-	// Update data di database
-	if err := ac.DB.Model(&wisata).Updates(input).Error; err != nil {
+	if err := ac.DB.Model(&wisata).Updates(input.Wisata).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal memperbarui wisata", nil))
 		return
+	}
+
+	if input.TagIDs != nil {
+		var tags []models.Tag
+		if len(input.TagIDs) > 0 {
+			ac.DB.Where("id IN ?", input.TagIDs).Find(&tags)
+		}
+		
+		if err := ac.DB.Model(&wisata).Association("Tags").Replace(&tags); err != nil {
+			c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Data wisata terupdate, tapi gagal memperbarui tag", nil))
+			return
+		}
+		wisata.Tags = tags
 	}
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Wisata berhasil diperbarui", wisata))
@@ -228,6 +228,11 @@ func (ac *AdminController) DeleteWisata(c *gin.Context) {
 
 	if err := ac.DB.First(&wisata, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, utils.ErrorResponse("Wisata tidak ditemukan", nil))
+		return
+	}
+	
+	if err := ac.DB.Model(&wisata).Association("Tags").Clear(); err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal membersihkan relasi tag", nil))
 		return
 	}
 

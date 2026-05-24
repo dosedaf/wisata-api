@@ -52,22 +52,21 @@ type Schedule struct {
 }
 
 type Booking struct {
-	ID            uint      `gorm:"primaryKey" json:"bookingId"`
-	UserID        uint      `json:"userId"`
-	User          User      `gorm:"foreignKey:UserID" json:"user,omitempty"` 
-	WisataID      uint      `json:"wisataId"`
-	Wisata        Wisata    `gorm:"foreignKey:WisataID" json:"wisata"`
-	ScheduleID    uint      `json:"scheduleId"`
-	Schedule      Schedule  `gorm:"foreignKey:ScheduleID" json:"schedule"`
-	BookingCode   string    `gorm:"unique" json:"bookingCode"`
-	TotalTicket   int       `json:"totalTicket"`
-	TotalPrice    float64   `json:"totalPrice"`
-	Status        string    `gorm:"default:'PENDING'" json:"status"` 
-	PaymentMethod string    `json:"paymentMethod"` 
-	PaymentProof  string    `json:"paymentProof"` 
-	QRCode        string    `json:"qrCode"`
-	HasReviewed   bool      `gorm:"default:false" json:"hasReviewed"`
-	CreatedAt     time.Time `json:"createdAt"`
+    ID            uint      `gorm:"primaryKey" json:"bookingId"`
+    UserID        uint      `json:"userId"`
+    User          User      `gorm:"foreignKey:UserID" json:"user,omitempty"` 
+    WisataID      uint      `json:"wisataId"`
+    Wisata        Wisata    `gorm:"foreignKey:WisataID" json:"wisata"`
+    BookingCode   string    `gorm:"unique" json:"bookingCode"`
+    TotalTicket   int       `json:"totalTicket"`
+    TotalPrice    float64   `json:"totalPrice"`
+    Status        string    `gorm:"default:'PENDING'" json:"status"` 
+    PaymentMethod string    `json:"paymentMethod"` 
+    PaymentProof  string    `json:"paymentProof"` 
+    QRCode        string    `json:"qrCode"`
+    HasReviewed   bool      `gorm:"default:false" json:"hasReviewed"`
+    ValidUntil    time.Time `json:"validUntil"`
+    CreatedAt     time.Time `json:"createdAt"`
 }
 
 type Review struct {

@@ -44,7 +44,7 @@ func (uc *UserController) GetMyTickets(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var tickets []models.Booking
 
-	uc.DB.Preload("Wisata").Preload("Schedule").
+	uc.DB.Preload("Wisata").
 		Where("user_id = ? AND status = ?", userID, "ACTIVE").
 		Find(&tickets)
 
@@ -54,7 +54,7 @@ func (uc *UserController) GetMyTickets(c *gin.Context) {
 			"bookingId":   t.ID,
 			"bookingCode": t.BookingCode,
 			"status":      t.Status,
-			"visitDate":   t.Schedule.VisitDate,
+			"validUntil":  t.ValidUntil,
 			"totalTicket": t.TotalTicket,
 			"qrCode":      t.QRCode,
 			"wisata": map[string]interface{}{
@@ -71,7 +71,8 @@ func (uc *UserController) GetHistory(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var histories []models.Booking
 
-	uc.DB.Preload("Wisata").Preload("Schedule").
+	// HAPUS Preload("Schedule")
+	uc.DB.Preload("Wisata").
 		Where("user_id = ? AND status = ?", userID, "COMPLETED").
 		Find(&histories)
 
@@ -79,7 +80,7 @@ func (uc *UserController) GetHistory(c *gin.Context) {
 	for _, h := range histories {
 		response = append(response, map[string]interface{}{
 			"bookingId":   h.ID,
-			"visitDate":   h.Schedule.VisitDate,
+			"validUntil":  h.ValidUntil, // GANTI visitDate menjadi validUntil
 			"status":      h.Status,
 			"hasReviewed": h.HasReviewed,
 			"wisata": map[string]interface{}{
@@ -92,4 +93,3 @@ func (uc *UserController) GetHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", response))
 }
-

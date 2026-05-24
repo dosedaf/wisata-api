@@ -19,7 +19,6 @@ func (bc *BookingController) CreateBooking(c *gin.Context) {
 
 	var input struct {
 		WisataID    uint `json:"wisataId" binding:"required"`
-		ScheduleID  uint `json:"scheduleId" binding:"required"`
 		TotalTicket int  `json:"totalTicket" binding:"required,min=1"`
 	}
 
@@ -31,43 +30,38 @@ func (bc *BookingController) CreateBooking(c *gin.Context) {
 	tx := bc.DB.Begin()
 
 	var wisata models.Wisata
-	if err := tx.First(&wisata, input.WisataID).Error; err != nil {
+	if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&wisata, input.WisataID).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusNotFound, utils.ErrorResponse("Wisata tidak ditemukan", nil))
 		return
 	}
 
-	var schedule models.Schedule
-	if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&schedule, input.ScheduleID).Error; err != nil {
+	if wisata.Capacity < input.TotalTicket {
 		tx.Rollback()
-		c.JSON(http.StatusNotFound, utils.ErrorResponse("Jadwal tidak ditemukan", nil))
+		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Mohon maaf, sisa slot tiket tidak mencukupi", nil))
 		return
 	}
 
-	if schedule.RemainingQuota < input.TotalTicket {
+	wisata.Capacity -= input.TotalTicket
+	if err := tx.Save(&wisata).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusBadRequest, utils.ErrorResponse("Kuota tiket tidak mencukupi", nil))
-		return
-	}
-
-	schedule.RemainingQuota -= input.TotalTicket
-	if err := tx.Save(&schedule).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal memproses kuota", nil))
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal memproses kuota tiket", nil))
 		return
 	}
 
 	totalPrice := wisata.TicketPrice * float64(input.TotalTicket)
 	bookingCode := fmt.Sprintf("BOOK-%d-%d", time.Now().Unix(), userID)
+	
+	validUntil := time.Now().AddDate(0, 0, 30) 
 
 	booking := models.Booking{
 		UserID:      userID.(uint),
 		WisataID:    input.WisataID,
-		ScheduleID:  input.ScheduleID,
 		BookingCode: bookingCode,
 		TotalTicket: input.TotalTicket,
 		TotalPrice:  totalPrice,
 		Status:      "PENDING",
+		ValidUntil:  validUntil,
 	}
 
 	if err := tx.Create(&booking).Error; err != nil {
@@ -78,7 +72,7 @@ func (bc *BookingController) CreateBooking(c *gin.Context) {
 
 	tx.Commit() 
 
-	c.JSON(http.StatusCreated, utils.SuccessResponse("Booking berhasil dibuat", booking))
+	c.JSON(http.StatusCreated, utils.SuccessResponse("Booking berhasil dibuat. Tiket berlaku selama 30 hari.", booking))
 }
 
 func (bc *BookingController) CancelBooking(c *gin.Context) {
@@ -107,13 +101,13 @@ func (bc *BookingController) CancelBooking(c *gin.Context) {
 		return
 	}
 
-	var schedule models.Schedule
-	if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&schedule, booking.ScheduleID).Error; err == nil {
-		schedule.RemainingQuota += booking.TotalTicket
-		tx.Save(&schedule)
+	var wisata models.Wisata
+	if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&wisata, booking.WisataID).Error; err == nil {
+		wisata.Capacity += booking.TotalTicket
+		tx.Save(&wisata)
 	}
 
 	tx.Commit()
 
-	c.JSON(http.StatusOK, utils.SuccessResponse("Pesanan berhasil dibatalkan, kuota tiket dikembalikan", nil))
+	c.JSON(http.StatusOK, utils.SuccessResponse("Pesanan berhasil dibatalkan, stok tiket dikembalikan", nil))
 }
