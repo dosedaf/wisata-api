@@ -153,7 +153,9 @@ func main() {
 		api.POST("/bookings", bookingC.CreateBooking)
 		api.POST("/payments/upload", trxC.UploadPayment)
 
-		api.GET("/my-tickets", userC.GetMyTickets)
+		api.GET("/my-tickets", userC.GetActiveTickets)
+		api.GET("/my-tickets/active", userC.GetAllTickets)
+		api.GET("/my-tickets/pending", userC.GetPendingTickets)
 		api.GET("/history", userC.GetHistory)
 
 		api.POST("/reviews", trxC.CreateReview)

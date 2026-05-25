@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"wisata-api/models"
 	"wisata-api/utils"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -40,16 +41,72 @@ func (uc *UserController) UpdateProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, utils.SuccessResponse("Profile berhasil diperbarui", nil))
 }
 
-func (uc *UserController) GetMyTickets(c *gin.Context) {
+func (uc *UserController) GetAllTickets(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	var tickets []models.Booking
+
+	uc.DB.Preload("Wisata").
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&tickets)
+
+	response := []map[string]interface{}{}
+	for _, t := range tickets {
+		response = append(response, map[string]interface{}{
+			"bookingId":   t.ID,
+			"bookingCode": t.BookingCode,
+			"status":      t.Status,
+			"validUntil":  t.ValidUntil,
+			"totalTicket": t.TotalTicket,
+			"qrCode":      t.QRCode,
+			"wisata": map[string]interface{}{
+				"name":     t.Wisata.Name,
+				"imageUrl": t.Wisata.ImageUrl,
+			},
+		})
+	}
+
+	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", response))
+}
+
+func (uc *UserController) GetActiveTickets(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var tickets []models.Booking
 
 	uc.DB.Preload("Wisata").
 		Where("user_id = ? AND status = ?", userID, "ACTIVE").
+		Order("created_at DESC").
 		Find(&tickets)
 
 	response := []map[string]interface{}{}
+	for _, t := range tickets {
+		response = append(response, map[string]interface{}{
+			"bookingId":   t.ID,
+			"bookingCode": t.BookingCode,
+			"status":      t.Status,
+			"validUntil":  t.ValidUntil,
+			"totalTicket": t.TotalTicket,
+			"qrCode":      t.QRCode,
+			"wisata": map[string]interface{}{
+				"name":     t.Wisata.Name,
+				"imageUrl": t.Wisata.ImageUrl,
+			},
+		})
+	}
 
+	c.JSON(http.StatusOK, utils.SuccessResponse("Berhasil", response))
+}
+
+func (uc *UserController) GetPendingTickets(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	var tickets []models.Booking
+
+	uc.DB.Preload("Wisata").
+		Where("user_id = ? AND status IN ?", userID, []string{"PENDING", "WAITING_VERIFICATION"}).
+		Order("created_at DESC").
+		Find(&tickets)
+
+	response := []map[string]interface{}{}
 	for _, t := range tickets {
 		response = append(response, map[string]interface{}{
 			"bookingId":   t.ID,
@@ -74,9 +131,10 @@ func (uc *UserController) GetHistory(c *gin.Context) {
 
 	uc.DB.Preload("Wisata").
 		Where("user_id = ? AND status = ?", userID, "COMPLETED").
+		Order("created_at DESC").
 		Find(&histories)
 
-	var response []map[string]interface{}
+	response := []map[string]interface{}{}
 	for _, h := range histories {
 		response = append(response, map[string]interface{}{
 			"bookingId":   h.ID,
