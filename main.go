@@ -9,6 +9,7 @@ import (
 	"wisata-api/controllers"
 	"wisata-api/middlewares"
 	"wisata-api/models"
+	"wisata-api/utils"
 
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 
@@ -103,6 +104,8 @@ func main() {
 
 	seedTags(db)
 
+	memoryCache := utils.NewMemoryCache()
+
 	authC := &controllers.AuthController{DB: db}
 	wisataC := &controllers.WisataController{DB: db}
 	bookingC := &controllers.BookingController{DB: db}
@@ -110,7 +113,8 @@ func main() {
 	trxC := &controllers.TransactionController{DB: db}
 	adminC := &controllers.AdminController{DB: db}
 	uploadC := &controllers.UploadController{}
-	tagC := &controllers.TagController{DB: db}
+
+	tagC := &controllers.TagController{DB: db, Cache: memoryCache}
 
 	r := gin.Default()
 
