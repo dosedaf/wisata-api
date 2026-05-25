@@ -69,7 +69,6 @@ func (tc *TransactionController) UploadPayment(c *gin.Context) {
 		return
 	}
 
-	// Ubah status menjadi menunggu verifikasi
 	if err := tc.DB.Model(&models.Booking{}).Where("id = ? AND status = ?", input.BookingID, "PENDING").
 		Updates(map[string]interface{}{
 			"status":         "WAITING_VERIFICATION",

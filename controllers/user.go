@@ -71,7 +71,6 @@ func (uc *UserController) GetHistory(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var histories []models.Booking
 
-	// HAPUS Preload("Schedule")
 	uc.DB.Preload("Wisata").
 		Where("user_id = ? AND status = ?", userID, "COMPLETED").
 		Find(&histories)
@@ -80,7 +79,7 @@ func (uc *UserController) GetHistory(c *gin.Context) {
 	for _, h := range histories {
 		response = append(response, map[string]interface{}{
 			"bookingId":   h.ID,
-			"validUntil":  h.ValidUntil, // GANTI visitDate menjadi validUntil
+			"validUntil":  h.ValidUntil, 
 			"status":      h.Status,
 			"hasReviewed": h.HasReviewed,
 			"wisata": map[string]interface{}{

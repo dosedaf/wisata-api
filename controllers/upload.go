@@ -1,12 +1,15 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 	"wisata-api/utils"
+
+	"cloud.google.com/go/storage"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,20 +22,38 @@ func (uc *UploadController) UploadFile(c *gin.Context) {
 		return
 	}
 
-	uploadDir := "public/uploads"
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		os.MkdirAll(uploadDir, os.ModePerm)
+	f, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal membuka file", err.Error()))
+		return
 	}
+	defer f.Close()
 
+	ctx := context.Background()
+	
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal koneksi ke Cloud Storage", err.Error()))
+		return
+	}
+	defer client.Close()
+
+	bucketName := "wisata-api-bucket" 
+	
 	filename := fmt.Sprintf("%d_%s", time.Now().Unix(), filepath.Base(file.Filename))
-	savePath := fmt.Sprintf("%s/%s", uploadDir, filename)
 
-	if err := c.SaveUploadedFile(file, savePath); err != nil {
-		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal menyimpan file", err.Error()))
+	wc := client.Bucket(bucketName).Object(filename).NewWriter(ctx)
+	if _, err := io.Copy(wc, f); err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal mengunggah ke Cloud Storage", err.Error()))
+		return
+	}
+	
+	if err := wc.Close(); err != nil {
+		c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Gagal menyelesaikan unggahan", err.Error()))
 		return
 	}
 
-	fileURL := fmt.Sprintf("http://localhost:8080/%s", savePath)
+	fileURL := fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucketName, filename)
 
 	c.JSON(http.StatusOK, utils.SuccessResponse("File berhasil diunggah", gin.H{
 		"url": fileURL,
