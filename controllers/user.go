@@ -48,7 +48,8 @@ func (uc *UserController) GetMyTickets(c *gin.Context) {
 		Where("user_id = ? AND status = ?", userID, "ACTIVE").
 		Find(&tickets)
 
-	var response []map[string]interface{}
+	response := []map[string]interface{}{}
+
 	for _, t := range tickets {
 		response = append(response, map[string]interface{}{
 			"bookingId":   t.ID,
