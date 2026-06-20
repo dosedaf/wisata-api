@@ -16,7 +16,7 @@ type User struct {
 type Wisata struct {
 	ID                   uint            `gorm:"primaryKey" json:"id"`
 	Name                 string          `json:"name"`
-	Slug                 string          `gorm:"uniqueIndex" json:"slug"`
+	Slug                 string          `gorm:"size:191;uniqueIndex" json:"slug"`
 	Location             string          `json:"location"`
 	Description          string          `json:"description"`
 	TicketPrice          float64         `json:"ticketPrice"`
@@ -34,7 +34,7 @@ type Wisata struct {
 
 type Tag struct {
 	ID   uint   `gorm:"primaryKey" json:"id"`
-	Name string `gorm:"uniqueIndex" json:"name"`
+	Name string `gorm:"size:100;uniqueIndex" json:"name"`
 }
 
 type WisataGallery struct {
@@ -57,7 +57,7 @@ type Booking struct {
     User          User      `gorm:"foreignKey:UserID" json:"user,omitempty"` 
     WisataID      uint      `json:"wisataId"`
     Wisata        Wisata    `gorm:"foreignKey:WisataID" json:"wisata"`
-    BookingCode   string    `gorm:"unique" json:"bookingCode"`
+		BookingCode string `gorm:"size:50;unique" json:"bookingCode"`
     TotalTicket   int       `json:"totalTicket"`
     TotalPrice    float64   `json:"totalPrice"`
     Status        string    `gorm:"default:'PENDING'" json:"status"` 
