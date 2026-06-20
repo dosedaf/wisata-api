@@ -9,7 +9,7 @@ automatic_scaling:
 
 env_variables:
   ENV: "production"
-  DB_HOST: "34.101.167.164"
+  DB_HOST: "34.128.66.0"
   DB_PORT: "3306"
   DB_NAME: "wisata_db"
   DB_USER: "yoda"

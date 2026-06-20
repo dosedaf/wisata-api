@@ -31,7 +31,7 @@ func accessSecret() string {
 	}
 
 	req := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: "projects/991771824221/secrets/passwordmysql/versions/latest",
+		Name: "projects/991771824221/secrets/new_mysql",
 	}
 
 	result, err := client.AccessSecretVersion(ctx, req)
